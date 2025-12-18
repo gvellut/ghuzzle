@@ -9,6 +9,10 @@ inputs:
     description: 'Comma-separated list of extras to install (e.g., "s3, sql") or "all"'
     required: false
     default: ''
+  token:
+    description: 'GitHub Token for accessing private repos'
+    required: false
+    default: ${{ github.token }} # Fallback to the default runner token
 
 runs:
   using: "composite"
@@ -22,8 +26,8 @@ runs:
     - name: Run Ghuzzle
       shell: bash
       env:
-        # Pass the user input to the tool via Env Var
-        GZ_DEFINITION_PATH: ${{ inputs.definition }}
+        GZ_DEFINITION: ${{ inputs.definition }}
+        GZ_TOKEN: ${{ inputs.token }}
         
         # Configuration for uv python version selection:
         # 'system' = prefer the runner's pre-installed python (if it matches pyproject.toml)
@@ -32,7 +36,7 @@ runs:
         
         # Pass input to shell for parsing
         INPUT_EXTRAS: ${{ inputs.extras }}
-      
+         
       run: |
         # --- Logic to parse 'extras' input ---
         EXTRA_FLAGS=""
