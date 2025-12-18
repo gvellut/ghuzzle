@@ -4,6 +4,7 @@ inputs:
   definition:
     description: 'Path to the definition file'
     required: false
+    default: ''
   extras:
     description: 'Comma-separated list of extras to install (e.g., "s3, sql") or "all"'
     required: false

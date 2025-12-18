@@ -87,7 +87,7 @@ def download_and_extract(token, config, build_dir):
     print("--- Assembly Complete ---")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--token", required=True)
     args = parser.parse_args()
@@ -109,3 +109,7 @@ if __name__ == "__main__":
     ]
 
     download_and_extract(args.token, DEPENDENCIES, "./dist_assembly")
+
+
+if __name__ == "__main__":
+    main()
