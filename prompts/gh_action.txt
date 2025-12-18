@@ -1,0 +1,14 @@
+I want a action.yml for a python lib called ghuzzle : for now, the python code will be delivered with the action. They will live in the same repo for now. It is uv / pyproject.toml project with a script called ghuzzle (same as python lib). The project is installable so the script can be run (without referencing a specifig .py file).
+It is compatible with python 3.10 so should work fine in any GH runners.
+it is a composite that should install uv using the  - name: Install uv
+        uses: astral-sh/setup-uv@v7 action => no need for version (I will handle the compatibility is any need on ghuzzle side)
+then run ghuzzle with some ENVar set up by using some parameters set by the user of the action
+I suppose with uv run : a python version can be indicated ? Is it possible to make sure the currently present python version is to be used if suitable ? otherwise if there is none or not suitable : a minimum version to be managed by uv (set in the pyproject.toml file) => do not expose the py version as parameter for the action (it is internal)
+The parameters may be :
+extras : a list of strings to install ghuzzle (with uv run ; so additional deps can be passed) ; possible all for all extras
+definition : a parameter for ghuzzle passed to it as the env var : GZ_DEFINITION_PATH
+
+Is all of that possible ?
+
+
+version (to set the version of ghuzzle that is run ; I guess this will be used for the uv run ... ) : this will not be used for now since the ghuzzle code is included (and not installed from pypi) but set it up anyway. Tell me how to handle the version in the uv run

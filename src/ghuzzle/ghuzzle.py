@@ -8,11 +8,9 @@ from github import Auth, Github
 
 
 def download_and_extract(token, config, build_dir):
-    # 1. Authenticate using the App Token
     auth = Auth.Token(token)
     g = Github(auth=auth)
 
-    # Ensure build dir exists and is clean (optional)
     if not os.path.exists(build_dir):
         os.makedirs(build_dir)
 
