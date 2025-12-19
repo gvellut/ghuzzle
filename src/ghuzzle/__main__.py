@@ -47,10 +47,10 @@ class CatchAllExceptionsCommand(click.Command):
         try:
             return super().invoke(ctx)
         except Exception as ex:
-            raise UnrecoverableTPPSSError(str(ex), sys.exc_info()) from ex
+            raise UnrecoverableGZError(str(ex), sys.exc_info()) from ex
 
 
-class UnrecoverableTPPSSError(click.ClickException):
+class UnrecoverableGZError(click.ClickException):
     def __init__(self, message, exc_info):
         super().__init__(message)
         self.exc_info = exc_info
@@ -61,11 +61,11 @@ class UnrecoverableTPPSSError(click.ClickException):
         logger.debug("".join(traceback.format_exception(*self.exc_info)))
 
 
-@click.command(auto_envvar_prefix="GZ", cls=CatchAllExceptionsCommand)
-@click.option("-d", "--definition", default=DEFAULT_DEFINITION)
-@click.option("-o", "--build-dir", default=DEFAULT_BUILD_DIR)
+@click.command(cls=CatchAllExceptionsCommand)
+@click.option("-f", "--definition", default=DEFAULT_DEFINITION, show_default=True)
+@click.option("-o", "--build-dir", default=DEFAULT_BUILD_DIR, show_default=True)
 @click.option("-t", "--token")
-@click.option("-d", "--debug", "is_debug", envar="DEBUG", type=bool)
+@click.option("-d", "--debug", "is_debug", envvar="DEBUG", type=bool)
 def main(definition, build_dir, token, is_debug):
     setup_logging(is_debug)
 
@@ -75,8 +75,8 @@ def main(definition, build_dir, token, is_debug):
     with open(definition, encoding="utf-8") as f:
         definition = json.load(f)
 
-    download_and_extract(token, definition, build_dir)
+    download_and_extract(definition, build_dir, token)
 
 
 if __name__ == "__main__":
-    main()
+    main(auto_envvar_prefix="GZ")
