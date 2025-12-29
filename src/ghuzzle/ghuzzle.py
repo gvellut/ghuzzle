@@ -221,11 +221,11 @@ def download_and_extract(config, build_dir, token, ignore_dep_error):
             temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
 
             # Extract/Assemble
-            # We extract it into a subfolder named after the repo to keep things clean
             if dest_folder:
                 dest_folder = os.path.join(build_dir, dest_folder)
             else:
-                dest_folder = os.path.join(build_dir, repo_name.split("/")[-1])
+                # not separated from the other
+                dest_folder = build_dir
 
             # Determine if the file is extractable
             is_extractable = _is_extractable(temp_file)
