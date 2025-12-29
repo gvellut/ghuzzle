@@ -1,5 +1,5 @@
 name: 'Ghuzzle Action'
-description: 'Runs the ghuzzle tool with specified config and extras'
+description: 'Runs the ghuzzle tool with specified config'
 inputs:
   config:
     description: 'Path to the config file'
@@ -13,11 +13,6 @@ inputs:
     description: 'GitHub Token for accessing private repos'
     required: false
     default: ${{ github.token }} # Fallback to the default runner token
-  extras:
-    # currently no extra defined in ghuzzle so no should not be 
-    description: 'Comma-separated list of extras to install (e.g., "s3, sql") or "all"'
-    required: false
-    default: ''
 
 runs:
   using: "composite"
@@ -39,36 +34,14 @@ runs:
         # 'system' = prefer the runner's pre-installed python (if it matches pyproject.toml)
         # If system python is too old (e.g. <3.10), uv will auto-download a managed one.
         UV_PYTHON_PREFERENCE: system
-        
-        # Pass input to shell for parsing => not passed to the CLI tool
-        INPUT_EXTRAS: ${{ inputs.extras }}
-         
+                 
       run: |
-        # --- Logic to parse 'extras' input ---
-        EXTRA_FLAGS=""
-        
-        if [ "$INPUT_EXTRAS" == "all" ]; then
-          # If user passed "all", use the uv flag for all extras
-          EXTRA_FLAGS="--all-extras"
-        elif [ -n "$INPUT_EXTRAS" ]; then
-          # Split comma-separated string (e.g. "s3, sql") into flags
-          IFS=',' read -ra ADDR <<< "$INPUT_EXTRAS"
-          for i in "${ADDR[@]}"; do
-            # Trim whitespace
-            clean_extra=$(echo "$i" | xargs)
-            if [ -n "$clean_extra" ]; then
-              EXTRA_FLAGS="$EXTRA_FLAGS --extra $clean_extra"
-            fi
-          done
-        fi
 
-        echo "Starting Ghuzzle with extras: $EXTRA_FLAGS"
+        echo "Starting Ghuzzle"
 
         # --- Execution ---
         # 1. --project: Points to action_path (where pyproject.toml is)
-        # 2. $EXTRA_FLAGS: Injects the parsed extras
-        # 3. ghuzzle: Runs the script defined in [project.scripts]
+        # 2. ghuzzle: Runs the script defined in [project.scripts]
         uv run \
           --project "${{ github.action_path }}" \
-          $EXTRA_FLAGS \
           ghuzzle
