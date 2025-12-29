@@ -183,7 +183,7 @@ def _download_asset(repo_name, target_asset, temp_dir, token):
     return temp_file
 
 
-def download_and_extract(config, build_dir, token):
+def download_and_extract(config, build_dir, token, ignore_dep_error):
     os.makedirs(build_dir, exist_ok=True)
     temp_dir = _get_temp_dir()
     os.makedirs(temp_dir, exist_ok=True)
@@ -193,6 +193,7 @@ def download_and_extract(config, build_dir, token):
         logger.warning("No auth configured")
 
     g = Github(auth=auth)
+    has_errors = False
 
     for item in config:
         try:
@@ -206,7 +207,13 @@ def download_and_extract(config, build_dir, token):
 
             if not target_asset:
                 logger.error(f"No asset found matching '{asset_pattern}'")
-                continue
+                if ignore_dep_error:
+                    logger.warning("Continuing due to --ignore-dep-error flag")
+                    continue
+                else:
+                    msg = f"No asset found matching '{asset_pattern}' "
+                    msg += f"for {repo_name}"
+                    raise RuntimeError(f"Dependency error: {msg}")
 
             temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
 
@@ -247,3 +254,10 @@ def download_and_extract(config, build_dir, token):
             msg = f"Error processing {repo_name}"
             logger.error(msg)
             logger.debug("".join(traceback.format_exception(e)))
+            if not ignore_dep_error:
+                raise RuntimeError(f"Dependency error: {msg}") from e
+            logger.warning("Continuing due to --ignore-dep-error flag")
+            has_errors = True
+
+    if has_errors:
+        logger.warning("Completed with errors (ignored due to --ignore-dep-error flag)")

@@ -69,7 +69,13 @@ class UnrecoverableGZError(click.ClickException):
 @click.option("-o", "--build-dir", default=DEFAULT_BUILD_DIR, show_default=True)
 @click.option("-t", "--token")
 @click.option("-d", "--debug", "is_debug", envvar="DEBUG", type=bool)
-def main(config, build_dir, token, is_debug):
+@click.option(
+    "--ignore-dep-error",
+    is_flag=True,
+    default=False,
+    help="Continue if a dependency cannot be downloaded (default: abort on error)",
+)
+def main(config, build_dir, token, is_debug, ignore_dep_error):
     setup_logging(is_debug)
 
     if not Path(config).exists():
@@ -78,7 +84,7 @@ def main(config, build_dir, token, is_debug):
     with open(config, encoding="utf-8") as f:
         config = json.load(f)
 
-    download_and_extract(config, build_dir, token)
+    download_and_extract(config, build_dir, token, ignore_dep_error)
 
 
 if __name__ == "__main__":

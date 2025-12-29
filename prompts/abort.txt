@@ -1,0 +1,3 @@
+Process ignore-dep-error in action.yml :
+- update __main__.py and ghuzzle.py to take the flag argument and process : if dep cannot be downloaded abort in error : if flag set to true, continue 
+- update action to set the envvar use GZ_IGNORE_DEP_ERROR

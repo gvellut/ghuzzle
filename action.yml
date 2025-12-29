@@ -13,6 +13,10 @@ inputs:
     description: 'GitHub Token for accessing private repos'
     required: false
     default: ${{ github.token }} # Fallback to the default runner token
+  ignore-dep-error:
+    description: 'Flag to ignore if dep cannot be found'
+    required: false
+    default: 'n'
 
 runs:
   using: "composite"
@@ -29,6 +33,7 @@ runs:
         GZ_CONFIG: ${{ inputs.config }}
         GZ_BUILD_DIR:  ${{ inputs.build-dir }}
         GZ_TOKEN: ${{ inputs.token }}
+        GZ_IGNORE_DEP_ERROR: ${{ inputs.ignore-dep-error }}
         
         # Configuration for uv python version selection:
         # 'system' = prefer the runner's pre-installed python (if it matches pyproject.toml)
