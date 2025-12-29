@@ -72,6 +72,15 @@ Add to your workflow to assemble dependencies in CI:
 
 For private repositories, see the [Access private repo](#access-private-repo) section below.
 
+### Access the private action ghuzzle from other repo by same user
+
+1.  Go to your **`gvellut/ghuzzle`** repository on GitHub.
+2.  Click on **Settings** (top tab).
+3.  In the left sidebar, click **Actions** > **General**.
+4.  Scroll down to the bottom to find the **Access** section.
+5.  Select: **"Accessible from repositories owned by 'gvellut' user"**.
+6.  Click **Save**.
+
 ## Access private repo 
 
 To access private repositories, you must pass a token to the action via the `token` input. You can use either:
@@ -129,6 +138,8 @@ jobs:
 ### Using a Github App
 
 GitHub Apps provide a more secure and scalable way to authenticate, especially for organizations.
+
+The App ID and private key must be added to the secrets to every repo needing access to the private repositories where releases are stored.
 
 1.  **Navigate to Developer Settings:**
     *   Click your profile photo in the top-right corner -> **Settings**.
