@@ -126,6 +126,17 @@ def _find_asset(g: Github, repo_name, tag, asset_pattern):
         repo = g.get_repo(repo_name)
         if tag == LATEST:
             release = repo.get_latest_release()
+        elif any(c in tag for c in "*?[]"):
+            # Wildcard search in tags or titles
+            release = None
+            for r in repo.get_releases():
+                if fnmatch.fnmatch(r.tag_name, tag) or (
+                    r.title and fnmatch.fnmatch(r.title, tag)
+                ):
+                    release = r
+                    break
+            if not release:
+                raise ValueError(f"No release found matching pattern: {tag}")
         else:
             release = repo.get_release(tag)
     except Exception as e:
