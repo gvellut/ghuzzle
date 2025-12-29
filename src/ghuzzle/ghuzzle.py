@@ -23,7 +23,7 @@ CONFIG_KEY_REPO = "repo"
 CONFIG_KEY_TAG = "tag"
 CONFIG_KEY_ASSET_PATTERN = "asset-pattern"
 CONFIG_KEY_DEST = "dest"
-CONFIG_KEY_SINGLE_DIR = "single-dir"
+CONFIG_KEY_DIR_CONTENT = "dir-content"
 
 SOURCE_ZIP = "source.zip"
 SOURCE_TAR_GZ = "source.tar.gz"
@@ -200,7 +200,7 @@ def download_and_extract(config, build_dir, token):
             tag = item.get(CONFIG_KEY_TAG, LATEST)
             asset_pattern = item[CONFIG_KEY_ASSET_PATTERN]
             dest_folder = item.get(CONFIG_KEY_DEST)
-            single_dir = item.get(CONFIG_KEY_SINGLE_DIR, False)
+            dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
 
             target_asset = _find_asset(g, repo_name, tag, asset_pattern)
 
@@ -227,7 +227,7 @@ def download_and_extract(config, build_dir, token):
                 _extract_asset(temp_file, dest_folder)
 
                 # Handle single-dir option: flatten if only one directory
-                if single_dir:
+                if dir_content:
                     _flatten_single_dir(dest_folder)
             else:
                 # Not extracting: either extract=False or not an extractable format
