@@ -210,13 +210,12 @@ def download_and_extract(config, build_dir, token, ignore_dep_error):
             target_asset = _find_asset(g, repo_name, tag, asset_pattern)
 
             if not target_asset:
-                logger.error(f"No asset found matching '{asset_pattern}'")
+                msg = f"No asset found matching '{asset_pattern}' for {repo_name}"
+                logger.error(msg)
                 if ignore_dep_error:
                     logger.warning("Continuing due to --ignore-dep-error flag")
                     continue
                 else:
-                    msg = f"No asset found matching '{asset_pattern}' "
-                    msg += f"for {repo_name}"
                     raise RuntimeError(f"Dependency error: {msg}")
 
             temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
