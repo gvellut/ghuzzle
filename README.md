@@ -28,10 +28,30 @@ Import and call the `download_and_extract` function:
 from ghuzzle import download_and_extract
 
 config = [
-    {"repo": "user/repo", "tag": "v1.0", "asset_pattern": ".tar.gz"}
+    {"repo": "user/repo", "tag": "v1.0", "asset_pattern": "*.tar.gz"}
 ]
 download_and_extract(token="YOUR_TOKEN", config=config, build_dir="./build")
 ```
+
+## Config file
+
+Provide a JSON list of objects, e.g. `ghuzzle.json`:
+- `repo` (required): `owner/name` of the repository.
+- `tag` (optional, default `latest`): release tag to use.
+- `asset-pattern` (required): shell-style wildcard matched with `fnmatch` (e.g., `myfile*.zip`, `*.txt`, `asdasd*`). Use `source.zip` or `source.tar.gz` for source assets
+- `dest` (optional): output subfolder relative to the build-dir input to the action (defaults to the repo name).
+- `single-dir` (optional, default `false`): if extraction yields a single directory, flatten it.
+- `extract` (optional, default `true`): set to `false` to just copy the asset, even if extractable (zip, tar.gz). If not extractable, will have no effect
+
+[
+    {
+        "repo": "gvellut/dmp_midi",
+        "tag": "latest",
+        "asset-pattern": "*.zip",
+        "dest": "hello/jkliue"
+    },
+    ....
+]
 
 ## Usage as GitHub Action
 
