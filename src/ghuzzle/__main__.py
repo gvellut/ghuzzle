@@ -12,6 +12,7 @@ from .ghuzzle import download_and_extract
 
 logger = logging.getLogger(__package__)
 
+# same default as in action.yml
 DEFAULT_CONFIG = "ghuzzle.json"
 DEFAULT_BUILD_DIR = "dist"
 

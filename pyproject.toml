@@ -8,7 +8,7 @@ requires-python = ">=3.13"
 dependencies = ["colorama[cli]>=0.4.6", "pygithub>=2.8.1"]
 
 [project.scripts]
-ghuzzle = "ghuzzle.cli:main"
+ghuzzle = "ghuzzle.__main__:main"
 
 [project.optional-dependencies]
 cli = ["colorama>=0.4.6"]
