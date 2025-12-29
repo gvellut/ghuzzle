@@ -72,6 +72,13 @@ Add to your workflow to assemble dependencies in CI:
 
 For private repositories, see the [Access private repo](#access-private-repo) section below.
 
+### Inputs
+
+- `config`: Path to the configuration file (default: `./ghuzzle.json`).
+- `build-dir`: Output directory for downloaded assets (default: `./dist`).
+- `token`: GitHub token for accessing private repositories (default: `github.token`).
+- `ignore-dep-error`: Flag to continue if dependency cannot be found (default: `n`).
+
 ### Access the private action ghuzzle from other repo by same user
 
 1.  Go to your **`gvellut/ghuzzle`** repository on GitHub.
@@ -205,39 +212,4 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}  # Token generated from GitHub App
 ```
 
-Note: From the `create-github-app-token` documentation, if `owner` and `repositories` are empty, access will be scoped to only the current repository. If `owner` is set and `repositories` is empty, access will be scoped to all repositories in the provided repository owner's installation (dependent on the accessible repositories configured for App). So to access your arbitrary private repos, set the `owner` to yourself.
-
-#### Accessing private repos in external organizations
-
-If you need to access private repositories in an **external organization** (different from where your workflow runs), you must specify the `owner` and optionally restrict to specific `repositories` when generating the token:
-
-```yaml
-name: Build with Ghuzzle (External Org)
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate GitHub App Token for External Org
-        uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ secrets.MY_APP_ID }}
-          private-key: ${{ secrets.MY_APP_PRIVATE_KEY }}
-          owner: ExternalOrg                    # The external organization name
-          repositories: RepoA,RepoB             # Comma-separated list of repos (optional)
-
-      - name: Download dependencies
-        uses: your-org/ghuzzle@v1
-        with:
-          config: ./ghuzzle.json
-          build-dir: ./dist
-          token: ${{ steps.app-token.outputs.token }}
-```
-
-> **Important:** The GitHub App must be installed on the target organization (`ExternalOrg`) with access to the specified repositories. The `owner` parameter restricts the token scope to that organization, and `repositories` further limits it to specific repos within that organization.
+**Note**: From the `create-github-app-token` documentation, if `owner` and `repositories` are empty, access will be scoped to only the current repository. If `owner` is set and `repositories` is empty, access will be scoped to all repositories in the provided repository owner's installation (dependent on the accessible repositories configured for App). So to access your arbitrary private repos, set the `owner` to yourself. It is also possible to set it to another user / organization if needed (but all the repos inside a specific config and run of a ghuzzle step should be accessible with the same token).
