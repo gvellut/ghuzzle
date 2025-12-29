@@ -1,0 +1,26 @@
+4 tasks :
+
+- Task 1 update the README 
+
+- complete TODO ind README.md
+
+### Private Access Token
+
+TODO
+
+=> write how to generate a private access token to a private repository
+- ## Usage as GitHub Action => complete this section by mentioning you don't have to pass a token to access a public repo
+
+- complete ## Access private repo  :  a token needs to be passed see action.yml
+indicate how to access either a token configured in the repo (as a secret ) ie PAT OR the token generated from the github app (as a variable)
+Add a full example to both parts
+- indicate for github app how to specify owner or repo if private external org or constrained to org
+owner: ExternalOrg
+repositories: RepoB
+
+
+- task 2 when downloading : use RUNNER_TEMP to put the downloaded asset instead of the build dir in temp_file = os.path.join(build_dir, target_asset.name). Then extract or copy to the correct dest folder
+
+- task 3 for assets with  all the suported extensions : extract = True by default. Can be set to extract = False explicity. Also if not an extractable extension : log warning but copy to dest folder (extract = True has no effect)
+
+- task 4 Add config key "single-dir" in config JSON (ghuzzle.json): boolean  : default false :  if true : for a downloadable release : if extractable, if it contains only a single directory , the content of that directory is put in the dest folder (instead of the single directory). For non extractable or extract = False : no effect if single-dir is True (will be a file anyway)
