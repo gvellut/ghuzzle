@@ -185,8 +185,7 @@ def _download_asset(repo_name, target_asset, temp_dir, token):
 
 def download_and_extract(config, build_dir, token, ignore_dep_error):
     os.makedirs(build_dir, exist_ok=True)
-    temp_dir = _get_temp_dir()
-    os.makedirs(temp_dir, exist_ok=True)
+    base_temp_dir = _get_temp_dir()
 
     auth = Auth.Token(token) if token else None
     if not auth:
@@ -199,68 +198,84 @@ def download_and_extract(config, build_dir, token, ignore_dep_error):
     g = Github(auth=auth)
     has_errors = False
 
-    for item in config:
-        try:
-            repo_name = item[CONFIG_KEY_REPO]
-            tag = item.get(CONFIG_KEY_TAG, LATEST)
-            asset_pattern = item[CONFIG_KEY_ASSET_PATTERN]
-            dest_folder = item.get(CONFIG_KEY_DEST)
-            dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
+    with tempfile.TemporaryDirectory(dir=base_temp_dir) as temp_dir:
+        for item in config:
+            try:
+                repo_name = item[CONFIG_KEY_REPO]
+                tag = item.get(CONFIG_KEY_TAG, LATEST)
+                asset_pattern = item[CONFIG_KEY_ASSET_PATTERN]
+                dest_folder = item.get(CONFIG_KEY_DEST)
+                dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
 
-            target_asset = _find_asset(g, repo_name, tag, asset_pattern)
+                target_asset = _find_asset(g, repo_name, tag, asset_pattern)
 
-            if not target_asset:
-                msg = f"No asset found matching '{asset_pattern}' for {repo_name}"
-                logger.error(msg)
-                if ignore_dep_error:
-                    logger.warning("Continuing due to --ignore-dep-error flag")
-                    continue
+                if not target_asset:
+                    msg = f"No asset found matching '{asset_pattern}' for {repo_name}"
+                    logger.error(msg)
+                    if ignore_dep_error:
+                        logger.warning("Continuing due to --ignore-dep-error flag")
+                        continue
+                    else:
+                        raise RuntimeError(f"Dependency error: {msg}")
+
+                temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
+
+                # Extract/Assemble
+                if dest_folder:
+                    dest_folder = os.path.join(build_dir, dest_folder)
                 else:
-                    raise RuntimeError(f"Dependency error: {msg}")
+                    # not separated from the others. Use explicit name if want to
+                    # extract to dir with repo name
+                    dest_folder = build_dir
 
-            temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
+                # Determine if the file is extractable
+                is_extractable = _is_extractable(temp_file)
+                # extract defaults to True, but user can explicitly set to False
+                should_extract = item.get("extract", True)
 
-            # Extract/Assemble
-            if dest_folder:
-                dest_folder = os.path.join(build_dir, dest_folder)
-            else:
-                # not separated from the other
-                dest_folder = build_dir
+                if should_extract and is_extractable:
+                    logger.info(f"Extracting to {dest_folder}...")
 
-            # Determine if the file is extractable
-            is_extractable = _is_extractable(temp_file)
-            # extract defaults to True, but user can explicitly set to False
-            should_extract = item.get("extract", True)
+                    # Extract to a temporary staging directory first
+                    staging_dir = tempfile.mkdtemp(dir=temp_dir, prefix="staging_")
+                    _extract_asset(temp_file, staging_dir)
 
-            if should_extract and is_extractable:
-                logger.info(f"Extracting to {dest_folder}...")
-                _extract_asset(temp_file, dest_folder)
+                    # Handle dir-content option: flatten if only one directory
+                    if dir_content:
+                        _flatten_single_dir(staging_dir)
 
-                # Handle single-dir option: flatten if only one directory
-                if dir_content:
-                    _flatten_single_dir(dest_folder)
-            else:
-                # Not extracting: either extract=False or not an extractable format
-                if should_extract and not is_extractable:
-                    ext = os.path.splitext(temp_file)[1] if "." in temp_file else ""
-                    logger.warning(
-                        f"Cannot extract '{ext}' files. Copying to destination instead."
-                    )
+                    # Merge contents from staging to final destination
+                    os.makedirs(dest_folder, exist_ok=True)
+                    for item_name in os.listdir(staging_dir):
+                        src = os.path.join(staging_dir, item_name)
+                        dst = os.path.join(dest_folder, item_name)
+                        if os.path.isdir(src):
+                            shutil.copytree(src, dst, dirs_exist_ok=True)
+                        else:
+                            shutil.copy2(src, dst)
+                else:
+                    # Not extracting: either extract=False or not an extractable format
+                    if should_extract and not is_extractable:
+                        ext = os.path.splitext(temp_file)[1] if "." in temp_file else ""
+                        logger.warning(
+                            f"Cannot extract '{ext}' files. Copying to destination "
+                            "instead."
+                        )
 
-                # Copy file to destination folder
-                os.makedirs(dest_folder, exist_ok=True)
-                dest_path = os.path.join(dest_folder, target_asset.name)
-                shutil.copy2(temp_file, dest_path)
-                logger.info(f"Copied {target_asset.name} to {dest_folder}")
+                    # Copy file to destination folder
+                    os.makedirs(dest_folder, exist_ok=True)
+                    dest_path = os.path.join(dest_folder, target_asset.name)
+                    shutil.copy2(temp_file, dest_path)
+                    logger.info(f"Copied {target_asset.name} to {dest_folder}")
 
-        except Exception as e:
-            msg = f"Error processing {repo_name}"
-            logger.error(msg)
-            logger.debug("".join(traceback.format_exception(e)))
-            if not ignore_dep_error:
-                raise RuntimeError(f"Dependency error: {msg}") from e
-            logger.warning("Continuing due to --ignore-dep-error flag")
-            has_errors = True
+            except Exception as e:
+                msg = f"Error processing {repo_name}"
+                logger.error(msg)
+                logger.debug("".join(traceback.format_exception(e)))
+                if not ignore_dep_error:
+                    raise RuntimeError(f"Dependency error: {msg}") from e
+                logger.warning("Continuing due to --ignore-dep-error flag")
+                has_errors = True
 
     if has_errors:
         logger.warning("Completed with errors (ignored due to --ignore-dep-error flag)")
