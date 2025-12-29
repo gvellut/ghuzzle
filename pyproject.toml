@@ -5,13 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 authors = [{ name = "Guilhem Vellut", email = "guilhem.vellut@gmail.com" }]
 requires-python = ">=3.13"
-dependencies = ["colorama[cli]>=0.4.6", "pygithub>=2.8.1"]
+dependencies = ["click>=8.3.1", "colorama[cli]>=0.4.6", "pygithub>=2.8.1"]
 
 [project.scripts]
 ghuzzle = "ghuzzle.__main__:main"
-
-[project.optional-dependencies]
-cli = ["colorama>=0.4.6"]
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]
