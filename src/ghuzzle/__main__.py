@@ -12,7 +12,7 @@ from .ghuzzle import download_and_extract
 
 logger = logging.getLogger(__package__)
 
-DEFAULT_DEFINITION = "definition.json"
+DEFAULT_CONFIG = "ghuzzle.json"
 DEFAULT_BUILD_DIR = "dist"
 
 
@@ -61,22 +61,24 @@ class UnrecoverableGZError(click.ClickException):
         logger.debug("".join(traceback.format_exception(*self.exc_info)))
 
 
-@click.command(cls=CatchAllExceptionsCommand)
-@click.option("-f", "--definition", default=DEFAULT_DEFINITION, show_default=True)
+@click.command(
+    context_settings={"auto_envvar_prefix": "GZ"}, cls=CatchAllExceptionsCommand
+)
+@click.option("-f", "--config", default=DEFAULT_CONFIG, show_default=True)
 @click.option("-o", "--build-dir", default=DEFAULT_BUILD_DIR, show_default=True)
 @click.option("-t", "--token")
 @click.option("-d", "--debug", "is_debug", envvar="DEBUG", type=bool)
-def main(definition, build_dir, token, is_debug):
+def main(config, build_dir, token, is_debug):
     setup_logging(is_debug)
 
-    if not Path(definition).exists():
-        raise click.ClickException(f"File {definition} not found")
+    if not Path(config).exists():
+        raise click.ClickException(f"File {config} not found")
 
-    with open(definition, encoding="utf-8") as f:
-        definition = json.load(f)
+    with open(config, encoding="utf-8") as f:
+        config = json.load(f)
 
-    download_and_extract(definition, build_dir, token)
+    download_and_extract(config, build_dir, token)
 
 
 if __name__ == "__main__":
-    main(auto_envvar_prefix="GZ")
+    main()

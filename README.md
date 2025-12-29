@@ -18,7 +18,7 @@ Run the tool with a GitHub token. Edit the `DEPENDENCIES` list in `ghuzzle.py` o
 python -m ghuzzle --token YOUR_GITHUB_TOKEN
 ```
 
-This downloads assets matching patterns from specified repos/tags and extracts them into `./dist_assembly`.
+This downloads assets matching patterns from specified repos/tags and extracts them into `./dist`.
 
 ## Usage as Python Library
 
@@ -40,15 +40,16 @@ Add to your workflow to assemble dependencies in CI:
 ```yaml
 - uses: your-org/ghuzzle@v1
   with:
-    definition: path/to/definition.json  # Optional: custom config file
-    extras: s3,sql  # Optional: comma-separated uv extras for installation
+    definition: path/to/ghuzzle.json  # Optional: custom config file : default is ./ghuzzle.json in root of current repo (running the workflow)
 ```
-
-This runs Ghuzzle using uv, installing any specified extras.
 
 ## Access private repo 
 
-Using a Github App:
+### Private Access Token
+
+TODO
+
+### Using a Github App
 
 1.  **Navigate to Developer Settings:**
     *   Click your profile photo in the top-right corner -> **Settings**.

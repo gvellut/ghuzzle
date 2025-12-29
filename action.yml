@@ -1,18 +1,23 @@
 name: 'Ghuzzle Action'
-description: 'Runs the ghuzzle tool with specified definition and extras'
+description: 'Runs the ghuzzle tool with specified config and extras'
 inputs:
-  definition:
-    description: 'Path to the definition file'
+  config:
+    description: 'Path to the config file'
     required: false
-    default: ''
-  extras:
-    description: 'Comma-separated list of extras to install (e.g., "s3, sql") or "all"'
+    default: './ghuzzle.json'
+  build-dir:
+    description: 'Folder path to copy the assets'
     required: false
-    default: ''
+    default: './dist'
   token:
     description: 'GitHub Token for accessing private repos'
     required: false
     default: ${{ github.token }} # Fallback to the default runner token
+  extras:
+    # currently no extra defined in ghuzzle so no should not be 
+    description: 'Comma-separated list of extras to install (e.g., "s3, sql") or "all"'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -26,7 +31,8 @@ runs:
     - name: Run Ghuzzle
       shell: bash
       env:
-        GZ_DEFINITION: ${{ inputs.definition }}
+        GZ_CONFIG: ${{ inputs.config }}
+        GZ_BUILD_DIR:  ${{ inputs.build-dir }}
         GZ_TOKEN: ${{ inputs.token }}
         
         # Configuration for uv python version selection:
@@ -34,7 +40,7 @@ runs:
         # If system python is too old (e.g. <3.10), uv will auto-download a managed one.
         UV_PYTHON_PREFERENCE: system
         
-        # Pass input to shell for parsing
+        # Pass input to shell for parsing => not passed to the CLI tool
         INPUT_EXTRAS: ${{ inputs.extras }}
          
       run: |
@@ -55,7 +61,7 @@ runs:
             fi
           done
         fi
-        
+
         echo "Starting Ghuzzle with extras: $EXTRA_FLAGS"
 
         # --- Execution ---
