@@ -183,7 +183,7 @@ def _download_asset(repo_name, target_asset, temp_dir, token):
     return temp_file
 
 
-def download_and_extract(config, build_dir, token, ignore_dep_error):
+def download_and_extract(config, build_dir, token, ignore_dep_error=False):
     os.makedirs(build_dir, exist_ok=True)
     base_temp_dir = _get_temp_dir()
 

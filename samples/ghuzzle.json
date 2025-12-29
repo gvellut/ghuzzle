@@ -2,13 +2,12 @@
     {
         "repo": "MyUser/repo-a",
         "tag": "v1.0.0",
-        "asset_pattern": ".tar.gz",
-        "extract": true
+        "asset_pattern": "*.tar.gz"
     },
     {
         "repo": "MyUser/repo-b",
         "tag": "latest",
-        "asset_pattern": ".tar.gz",
-        "extract": true
+        "asset_pattern": "MyBinary*",
+        "extract": false
     }
 ]
