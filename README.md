@@ -4,7 +4,7 @@ Ghuzzle is a tool to download and assemble dependencies from GitHub releases int
 
 ## Installation
 
-Install as a Python package:
+Install as a Python package (**Not yet**):
 
 ```bash
 pip install ghuzzle
@@ -62,7 +62,7 @@ Example:
 Add to your workflow to assemble dependencies in CI:
 
 ```yaml
-- uses: your-org/ghuzzle@v1
+- uses: your-org/ghuzzle@v2
   with:
     config: path/to/ghuzzle.json  # Optional: custom config file (default: ./ghuzzle.json)
     build-dir: ./dist              # Optional: output directory (default: ./dist)
