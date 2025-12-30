@@ -2,6 +2,7 @@
 name = "ghuzzle"
 version = "0.1.0"
 description = "Add your description here"
+license = "MIT"
 readme = "README.md"
 authors = [{ name = "Guilhem Vellut", email = "guilhem.vellut@gmail.com" }]
 requires-python = ">=3.13"
