@@ -202,7 +202,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
     if not auth:
         logger.warning("No auth configured")
     elif token.startswith("ghs_"):
-        logger.info("Using GitHub App token")
+        logger.info("Using GitHub App or Actions token")
     else:
         logger.info("Using Personal Access Token")
 
