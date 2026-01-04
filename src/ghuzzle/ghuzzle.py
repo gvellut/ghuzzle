@@ -15,6 +15,7 @@ import zipfile
 import attr
 from github import Auth, Github, GithubIntegration
 from htpy import a, body, div, h1, head, html, link, meta, style, title
+from markupsafe import Markup
 import requests
 
 if TYPE_CHECKING:
@@ -534,7 +535,7 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
             meta(name="viewport", content="width=device-width, initial-scale=1.0"),
             link(rel="icon", href="/favicon.svg", type="image/svg+xml"),
             title[page_title] if page_title else title[""],
-            style[css_content],
+            style[Markup(css_content)],
         ],
         body[
             header_element,
