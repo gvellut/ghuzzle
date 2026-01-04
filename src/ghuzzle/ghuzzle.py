@@ -64,7 +64,7 @@ LISTING_CONFIG_KEY_HOMEPAGE = "homepage"
 LISTING_CONFIG_KEY_HOMEPAGE_TITLE = "homepage-title"
 
 # Default values
-DEFAULT_SUMMARY_PATH = "ghuzzle-result.json"
+DEFAULT_SUMMARY_PATH = "ghuzzle-summary.json"
 DEFAULT_LISTING_DIR = "ghuzzle"
 
 

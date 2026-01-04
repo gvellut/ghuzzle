@@ -63,7 +63,7 @@ For private repositories, see the [Access private repo](#access-private-repo) se
 - `build-dir`: Output directory for downloaded assets (default: `./dist`).
 - `token`: GitHub token for accessing private repositories (default: `github.token`).
 - `ignore-dep-error`: Flag to continue if dependency cannot be found (default: `n`).
-- `output-summary`: Output a JSON summary of results. Set to `true` for default path (`ghuzzle-result.json`) or specify a custom path. This can be used to build a custom listing page (you will have to set it up yourself).
+- `output-summary`: Output a JSON summary of results. Set to `true` for default path (`ghuzzle-summary.json`) or specify a custom path. This can be used to build a custom listing page (you will have to set it up yourself).
 - `gen-listing`: Generate an `index.html` listing page. Set to `true` for default location (inside build dir: Common `dest` prefix or folder `ghuzzle` if no common prefix) or specify a custom directory path (relative to `$PWD` of step)
 - `gen-listing-config`: Path to a JSON config file for the listing page (`title`, `homepage`, `homepage-title` keys).
 

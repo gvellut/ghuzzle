@@ -18,7 +18,7 @@ inputs:
     required: false
     default: 'n'
   output-summary:
-    description: 'Output a JSON summary of results. Set to "true" for default path (ghuzzle-result.json) or specify a custom path.'
+    description: 'Output a JSON summary of results. Set to "true" for default path (ghuzzle-summary.json) or specify a custom path.'
     required: false
     default: ''
   gen-listing:
