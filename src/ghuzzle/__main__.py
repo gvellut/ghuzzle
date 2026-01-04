@@ -8,7 +8,13 @@ import click
 import colorama
 from colorama import Fore
 
-from .ghuzzle import download_and_extract
+from .ghuzzle import (
+    DEFAULT_SUMMARY_PATH,
+    download_and_extract,
+    generate_listing,
+    get_listing_output_dir,
+    output_summary as write_summary,
+)
 
 logger = logging.getLogger(__package__)
 
@@ -75,16 +81,77 @@ class UnrecoverableGZError(click.ClickException):
     default=False,
     help="Continue if a dependency cannot be downloaded (default: abort on error)",
 )
-def main(config, build_dir, token, is_debug, ignore_dep_error):
+@click.option(
+    "--output-summary",
+    "output_summary_opt",
+    default=None,
+    help=(
+        "Output a JSON summary of results. "
+        f"Use 'true' for default path ({DEFAULT_SUMMARY_PATH}) "
+        "or specify a custom path."
+    ),
+)
+@click.option(
+    "--gen-listing",
+    default=None,
+    help=(
+        "Generate an index.html listing page. "
+        "Use 'true' for default location (common dest prefix or 'ghuzzle' folder) "
+        "or specify a custom directory path."
+    ),
+)
+@click.option(
+    "--gen-listing-config",
+    default=None,
+    type=click.Path(exists=True),
+    help=(
+        "Path to a JSON config file for the listing page "
+        "(title, homepage, homepage-title)."
+    ),
+)
+def main(
+    config,
+    build_dir,
+    token,
+    is_debug,
+    ignore_dep_error,
+    output_summary_opt,
+    gen_listing,
+    gen_listing_config,
+):
     setup_logging(is_debug)
 
     if not Path(config).exists():
         raise click.ClickException(f"File {config} not found")
 
     with open(config, encoding="utf-8") as f:
-        config = json.load(f)
+        config_data = json.load(f)
 
-    download_and_extract(config, build_dir, token, ignore_dep_error)
+    results = download_and_extract(config_data, build_dir, token, ignore_dep_error)
+
+    # Handle output-summary
+    if output_summary_opt:
+        summary_path = (
+            DEFAULT_SUMMARY_PATH
+            if output_summary_opt.lower() in ("true", "y", "yes", "1")
+            else output_summary_opt
+        )
+        write_summary(results, summary_path)
+
+    # Handle gen-listing
+    if gen_listing:
+        if gen_listing.lower() in ("true", "y", "yes", "1"):
+            listing_dir = get_listing_output_dir(config_data, build_dir)
+        else:
+            listing_dir = gen_listing
+
+        # Load listing config if provided
+        listing_config = None
+        if gen_listing_config:
+            with open(gen_listing_config, encoding="utf-8") as f:
+                listing_config = json.load(f)
+
+        generate_listing(results, listing_dir, listing_config)
 
 
 if __name__ == "__main__":
