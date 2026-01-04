@@ -1,6 +1,8 @@
 import fnmatch
+import json
 import logging
 import os
+from pathlib import Path
 import shutil
 import tarfile
 import tempfile
@@ -27,6 +29,31 @@ CONFIG_KEY_DIR_CONTENT = "dir-content"
 
 SOURCE_ZIP = "source.zip"
 SOURCE_TAR_GZ = "source.tar.gz"
+
+# Summary output keys
+SUMMARY_KEY_REPO = "repo"
+SUMMARY_KEY_DESCRIPTION = "description"
+SUMMARY_KEY_URL = "url"
+SUMMARY_KEY_TOPICS = "topics"
+SUMMARY_KEY_TAG = "tag"
+SUMMARY_KEY_TITLE = "title"
+SUMMARY_KEY_NOTES = "notes"
+SUMMARY_KEY_FILENAME = "filename"
+SUMMARY_KEY_DATE = "date"
+SUMMARY_KEY_DEST = "dest"
+SUMMARY_KEY_REPO_OK = "repo_ok"
+SUMMARY_KEY_RELEASE_OK = "release_ok"
+SUMMARY_KEY_ASSET_OK = "asset_ok"
+SUMMARY_KEY_DOWNLOAD_OK = "download_ok"
+
+# Listing config keys
+LISTING_CONFIG_KEY_TITLE = "title"
+LISTING_CONFIG_KEY_HOMEPAGE = "homepage"
+LISTING_CONFIG_KEY_HOMEPAGE_TITLE = "homepage-title"
+
+# Default values
+DEFAULT_SUMMARY_PATH = "ghuzzle-result.json"
+DEFAULT_LISTING_DIR = "ghuzzle"
 
 
 def _is_extractable(filename):
@@ -118,12 +145,36 @@ def _get_download_info(repo_name, target_asset, token):
         return target_asset.browser_download_url, {}
 
 
+class FindResult:
+    """Result from _find_asset with repo, release, and asset info."""
+
+    def __init__(self, repo_name):
+        self.repo_name = repo_name
+        self.repo = None
+        self.release = None
+        self.asset = None
+        self.repo_ok = False
+        self.release_ok = False
+        self.asset_ok = False
+
+
 def _find_asset(g: Github, repo_name, tag, asset_pattern):
     logger.info(f"Processing {repo_name} ({tag})...")
 
-    # locate the Release
+    result = FindResult(repo_name)
+
+    # locate the Repo
     try:
         repo = g.get_repo(repo_name)
+        result.repo = repo
+        result.repo_ok = True
+    except Exception as e:
+        logger.error(f"Failed to find repo: {e}")
+        logger.debug("".join(traceback.format_exception(e)))
+        return result
+
+    # locate the Release
+    try:
         if tag == LATEST:
             release = repo.get_latest_release()
         elif any(c in tag for c in "*?[]"):
@@ -139,10 +190,12 @@ def _find_asset(g: Github, repo_name, tag, asset_pattern):
                 raise ValueError(f"No release found matching pattern: {tag}")
         else:
             release = repo.get_release(tag)
+        result.release = release
+        result.release_ok = True
     except Exception as e:
-        logger.error(f"Failed to find repo or release: {e}")
+        logger.error(f"Failed to find release: {e}")
         logger.debug("".join(traceback.format_exception(e)))
-        return None
+        return result
 
     # Find the specific asset ID
     target_asset = None
@@ -174,7 +227,11 @@ def _find_asset(g: Github, repo_name, tag, asset_pattern):
                 },
             )
 
-    return target_asset
+    if target_asset:
+        result.asset = target_asset
+        result.asset_ok = True
+
+    return result
 
 
 def _download_asset(repo_name, target_asset, temp_dir, token):
@@ -194,6 +251,41 @@ def _download_asset(repo_name, target_asset, temp_dir, token):
     return temp_file
 
 
+def _build_result_entry(repo_name, dest_folder, find_result, download_ok=False):
+    """Build a result entry dictionary from find_result data."""
+    entry = {
+        SUMMARY_KEY_REPO: repo_name,
+        SUMMARY_KEY_REPO_OK: find_result.repo_ok,
+        SUMMARY_KEY_RELEASE_OK: find_result.release_ok,
+        SUMMARY_KEY_ASSET_OK: find_result.asset_ok,
+        SUMMARY_KEY_DOWNLOAD_OK: download_ok,
+    }
+
+    if find_result.repo_ok and find_result.repo:
+        repo = find_result.repo
+        entry[SUMMARY_KEY_DESCRIPTION] = repo.description
+        entry[SUMMARY_KEY_URL] = repo.html_url
+        entry[SUMMARY_KEY_TOPICS] = repo.get_topics()
+
+    if find_result.release_ok and find_result.release:
+        release = find_result.release
+        entry[SUMMARY_KEY_TAG] = release.tag_name
+        entry[SUMMARY_KEY_TITLE] = release.title
+        entry[SUMMARY_KEY_NOTES] = release.body
+        if release.published_at:
+            entry[SUMMARY_KEY_DATE] = release.published_at.isoformat()
+        else:
+            entry[SUMMARY_KEY_DATE] = None
+
+    if find_result.asset_ok and find_result.asset:
+        entry[SUMMARY_KEY_FILENAME] = find_result.asset.name
+
+    if dest_folder:
+        entry[SUMMARY_KEY_DEST] = dest_folder
+
+    return entry
+
+
 def download_and_extract(config, build_dir, token, ignore_dep_error=False):
     os.makedirs(build_dir, exist_ok=True)
     base_temp_dir = _get_temp_dir()
@@ -208,36 +300,47 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
 
     g = Github(auth=auth)
     has_errors = False
+    results = []
 
     with tempfile.TemporaryDirectory(dir=base_temp_dir) as temp_dir:
         for item in config:
+            repo_name = item[CONFIG_KEY_REPO]
+            tag = item.get(CONFIG_KEY_TAG, LATEST)
+            asset_pattern = item[CONFIG_KEY_ASSET_PATTERN]
+            dest_folder = item.get(CONFIG_KEY_DEST)
+            dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
+
+            # Initialize find_result for error handling
+            find_result = FindResult(repo_name)
+
             try:
-                repo_name = item[CONFIG_KEY_REPO]
-                tag = item.get(CONFIG_KEY_TAG, LATEST)
-                asset_pattern = item[CONFIG_KEY_ASSET_PATTERN]
-                dest_folder = item.get(CONFIG_KEY_DEST)
-                dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
+                find_result = _find_asset(g, repo_name, tag, asset_pattern)
 
-                target_asset = _find_asset(g, repo_name, tag, asset_pattern)
-
-                if not target_asset:
+                if not find_result.asset_ok:
                     msg = f"No asset found matching '{asset_pattern}' for {repo_name}"
                     logger.error(msg)
                     if ignore_dep_error:
                         logger.warning("Continuing due to --ignore-dep-error flag")
+                        # Record partial result
+                        results.append(
+                            _build_result_entry(repo_name, dest_folder, find_result)
+                        )
+                        has_errors = True
                         continue
                     else:
                         raise RuntimeError(f"Dependency error: {msg}")
 
+                target_asset = find_result.asset
                 temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
 
                 # Extract/Assemble
+                final_dest_folder = dest_folder
                 if dest_folder:
-                    dest_folder = os.path.join(build_dir, dest_folder)
+                    final_dest_folder = os.path.join(build_dir, dest_folder)
                 else:
                     # not separated from the others. Use explicit name if want to
                     # extract to dir with repo name
-                    dest_folder = build_dir
+                    final_dest_folder = build_dir
 
                 # Determine if the file is extractable
                 is_extractable = _is_extractable(temp_file)
@@ -245,7 +348,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                 should_extract = item.get("extract", True)
 
                 if should_extract and is_extractable:
-                    logger.info(f"Extracting to {dest_folder}...")
+                    logger.info(f"Extracting to {final_dest_folder}...")
 
                     # Extract to a temporary staging directory first
                     staging_dir = tempfile.mkdtemp(dir=temp_dir, prefix="staging_")
@@ -256,10 +359,10 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                         _flatten_single_dir(staging_dir)
 
                     # Merge contents from staging to final destination
-                    os.makedirs(dest_folder, exist_ok=True)
+                    os.makedirs(final_dest_folder, exist_ok=True)
                     for item_name in os.listdir(staging_dir):
                         src = os.path.join(staging_dir, item_name)
-                        dst = os.path.join(dest_folder, item_name)
+                        dst = os.path.join(final_dest_folder, item_name)
                         if os.path.isdir(src):
                             shutil.copytree(src, dst, dirs_exist_ok=True)
                         else:
@@ -274,10 +377,17 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                         )
 
                     # Copy file to destination folder
-                    os.makedirs(dest_folder, exist_ok=True)
-                    dest_path = os.path.join(dest_folder, target_asset.name)
+                    os.makedirs(final_dest_folder, exist_ok=True)
+                    dest_path = os.path.join(final_dest_folder, target_asset.name)
                     shutil.copy2(temp_file, dest_path)
-                    logger.info(f"Copied {target_asset.name} to {dest_folder}")
+                    logger.info(f"Copied {target_asset.name} to {final_dest_folder}")
+
+                # Record successful result
+                results.append(
+                    _build_result_entry(
+                        repo_name, dest_folder, find_result, download_ok=True
+                    )
+                )
 
             except Exception as e:
                 msg = f"Error processing {repo_name}"
@@ -286,7 +396,156 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                 if not ignore_dep_error:
                     raise RuntimeError(f"Dependency error: {msg}") from e
                 logger.warning("Continuing due to --ignore-dep-error flag")
+                # Record partial result with download failure
+                results.append(
+                    _build_result_entry(repo_name, dest_folder, find_result)
+                )
                 has_errors = True
 
     if has_errors:
         logger.warning("Completed with errors (ignored due to --ignore-dep-error flag)")
+
+    return results
+
+
+def output_summary(results, output_path):
+    """Write the results to a JSON file."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    logger.info(f"Summary written to: {output_path}")
+
+
+def _get_common_prefix(paths):
+    """Get the common prefix path from a list of paths."""
+    if not paths:
+        return None
+
+    # Normalize paths and split into parts
+    path_parts = [Path(p).parts for p in paths if p]
+
+    if not path_parts:
+        return None
+
+    # Find common prefix
+    common_parts = []
+    for parts in zip(*path_parts, strict=False):
+        if len(set(parts)) == 1:
+            common_parts.append(parts[0])
+        else:
+            break
+
+    if not common_parts:
+        return None
+
+    return str(Path(*common_parts))
+
+
+def get_listing_output_dir(config, build_dir):
+    """Determine the output directory for the listing based on config dest paths."""
+    dest_paths = [
+        item.get(CONFIG_KEY_DEST) for item in config if item.get(CONFIG_KEY_DEST)
+    ]
+
+    if dest_paths:
+        common_prefix = _get_common_prefix(dest_paths)
+        if common_prefix:
+            return os.path.join(build_dir, common_prefix)
+
+    return DEFAULT_LISTING_DIR
+
+
+def _load_css():
+    """Load CSS from external file."""
+    css_path = Path(__file__).parent / "listing.css"
+    if css_path.exists():
+        return css_path.read_text(encoding="utf-8")
+    return ""
+
+
+def generate_listing(results, output_dir, listing_config=None):
+    """Generate an index.html listing page from the results."""
+    try:
+        from htpy import a, body, div, h1, head, html, link, meta, style, title
+    except ImportError:
+        logger.error(
+            "htpy is required for generating listings. Install with: pip install htpy"
+        )
+        return False
+
+    output_path = Path(output_dir) / "index.html"
+
+    if output_path.exists():
+        logger.error(f"Listing file already exists: {output_path}")
+        return False
+
+    # Load config
+    page_title = None
+    homepage = None
+    homepage_title = None
+    if listing_config:
+        page_title = listing_config.get(LISTING_CONFIG_KEY_TITLE)
+        homepage = listing_config.get(LISTING_CONFIG_KEY_HOMEPAGE)
+        homepage_title = listing_config.get(LISTING_CONFIG_KEY_HOMEPAGE_TITLE)
+
+    # Load CSS
+    css_content = _load_css()
+
+    # Build grid items
+    items = []
+    for i, result in enumerate(results):
+        if not result.get(SUMMARY_KEY_DOWNLOAD_OK):
+            continue
+
+        item_title = (
+            result.get(SUMMARY_KEY_TITLE)
+            or result.get(SUMMARY_KEY_TAG)
+            or result.get(SUMMARY_KEY_REPO)
+        )
+        dest = result.get(SUMMARY_KEY_DEST, "")
+
+        # Create link to the dest folder
+        link_href = dest if dest else "."
+
+        color_index = i % 6
+        item = div(class_=f"grid-item color-{color_index}")[
+            a(href=link_href)[item_title]
+        ]
+        items.append(item)
+
+    # Build page structure
+    header_element = None
+    if page_title:
+        header_element = h1(class_="page-title")[page_title]
+
+    footer_element = None
+    if homepage:
+        footer_text = homepage_title if homepage_title else homepage
+        footer_element = div(class_="footer")[
+            a(href=homepage)[footer_text]
+        ]
+
+    page = html(lang="en")[
+        head[
+            meta(charset="UTF-8"),
+            meta(name="viewport", content="width=device-width, initial-scale=1.0"),
+            link(rel="icon", href="/favicon.svg", type="image/svg+xml"),
+            title[page_title] if page_title else title[""],
+            style[css_content],
+        ],
+        body[
+            header_element,
+            div(class_="grid-container")[items],
+            footer_element,
+        ],
+    ]
+
+    # Write to file
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("<!DOCTYPE html>\n")
+        f.write(str(page))
+
+    logger.info(f"Listing page generated: {output_path}")
+    return True

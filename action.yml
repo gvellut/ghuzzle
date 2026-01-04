@@ -17,6 +17,18 @@ inputs:
     description: 'Flag to ignore if dep cannot be found'
     required: false
     default: 'n'
+  output-summary:
+    description: 'Output a JSON summary of results. Set to "true" for default path (ghuzzle-result.json) or specify a custom path.'
+    required: false
+    default: ''
+  gen-listing:
+    description: 'Generate an index.html listing page. Set to "true" for default location (common dest prefix) or specify a custom directory path.'
+    required: false
+    default: ''
+  gen-listing-config:
+    description: 'Path to a JSON config file for the listing page (title, homepage, homepage-title keys).'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -34,6 +46,9 @@ runs:
         GZ_BUILD_DIR:  ${{ inputs.build-dir }}
         GZ_TOKEN: ${{ inputs.token }}
         GZ_IGNORE_DEP_ERROR: ${{ inputs.ignore-dep-error }}
+        GZ_OUTPUT_SUMMARY: ${{ inputs.output-summary }}
+        GZ_GEN_LISTING: ${{ inputs.gen-listing }}
+        GZ_GEN_LISTING_CONFIG: ${{ inputs.gen-listing-config }}
         
         # Configuration for uv python version selection:
         # 'system' = prefer the runner's pre-installed python (if it matches pyproject.toml)
