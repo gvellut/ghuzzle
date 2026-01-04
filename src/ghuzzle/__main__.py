@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 import sys
 import traceback
@@ -9,10 +10,11 @@ import colorama
 from colorama import Fore
 
 from .ghuzzle import (
+    DEFAULT_LISTING_DIR,
     DEFAULT_SUMMARY_PATH,
     download_and_extract,
     generate_listing,
-    get_listing_output_dir,
+    get_common_dir,
     output_summary as write_summary,
 )
 
@@ -66,6 +68,9 @@ class UnrecoverableGZError(click.ClickException):
         logger.error("*** An unrecoverable error occured ***")
         logger.error(self.message)
         logger.debug("".join(traceback.format_exception(*self.exc_info)))
+
+
+TRUE_LOWER_STR = ("true", "y", "yes", "1")
 
 
 @click.command(
@@ -133,16 +138,21 @@ def main(
     if output_summary_opt:
         summary_path = (
             DEFAULT_SUMMARY_PATH
-            if output_summary_opt.lower() in ("true", "y", "yes", "1")
+            if output_summary_opt.lower() in TRUE_LOWER_STR
             else output_summary_opt
         )
         write_summary(results, summary_path)
 
     # Handle gen-listing
     if gen_listing:
-        if gen_listing.lower() in ("true", "y", "yes", "1"):
-            listing_dir = get_listing_output_dir(config_data, build_dir)
+        if gen_listing.lower() in TRUE_LOWER_STR:
+            listing_dir = get_common_dir(config_data)
+            if not listing_dir:
+                listing_dir = DEFAULT_LISTING_DIR
+            # relative to pwd
+            listing_dir = os.path.join(build_dir, listing_dir)
         else:
+            # suppose already realtive to pwd
             listing_dir = gen_listing
 
         # Load listing config if provided
@@ -151,7 +161,7 @@ def main(
             with open(gen_listing_config, encoding="utf-8") as f:
                 listing_config = json.load(f)
 
-        generate_listing(results, listing_dir, listing_config)
+        generate_listing(results, build_dir, listing_dir, listing_config)
 
 
 if __name__ == "__main__":

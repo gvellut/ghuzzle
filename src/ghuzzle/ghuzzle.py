@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import fnmatch
 import json
 import logging
@@ -7,10 +9,18 @@ import shutil
 import tarfile
 import tempfile
 import traceback
+from typing import TYPE_CHECKING
 import zipfile
 
+import attr
 from github import Auth, Github, GithubIntegration
+from htpy import a, body, div, h1, head, html, link, meta, style, title
 import requests
+
+if TYPE_CHECKING:
+    from github.GitRelease import GitRelease
+    from github.GitReleaseAsset import GitReleaseAsset
+    from github.Repository import Repository
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +42,7 @@ SOURCE_TAR_GZ = "source.tar.gz"
 
 # Summary output keys
 SUMMARY_KEY_REPO = "repo"
+SUMMARY_KEY_REPO_SHORT = "repo_short"
 SUMMARY_KEY_DESCRIPTION = "description"
 SUMMARY_KEY_URL = "url"
 SUMMARY_KEY_TOPICS = "topics"
@@ -145,17 +156,17 @@ def _get_download_info(repo_name, target_asset, token):
         return target_asset.browser_download_url, {}
 
 
+@attr.define
 class FindResult:
     """Result from _find_asset with repo, release, and asset info."""
 
-    def __init__(self, repo_name):
-        self.repo_name = repo_name
-        self.repo = None
-        self.release = None
-        self.asset = None
-        self.repo_ok = False
-        self.release_ok = False
-        self.asset_ok = False
+    repo_name: str
+    repo: Repository = None
+    release: GitRelease = None
+    asset: GitReleaseAsset = None
+    repo_ok: bool = False
+    release_ok: bool = False
+    asset_ok: bool = False
 
 
 def _find_asset(g: Github, repo_name, tag, asset_pattern):
@@ -251,7 +262,9 @@ def _download_asset(repo_name, target_asset, temp_dir, token):
     return temp_file
 
 
-def _build_result_entry(repo_name, dest_folder, find_result, download_ok=False):
+def _build_result_entry(
+    repo_name, dest_folder, find_result: FindResult, download_ok=False
+):
     """Build a result entry dictionary from find_result data."""
     entry = {
         SUMMARY_KEY_REPO: repo_name,
@@ -263,6 +276,7 @@ def _build_result_entry(repo_name, dest_folder, find_result, download_ok=False):
 
     if find_result.repo_ok and find_result.repo:
         repo = find_result.repo
+        entry[SUMMARY_KEY_REPO_SHORT] = repo.name
         entry[SUMMARY_KEY_DESCRIPTION] = repo.description
         entry[SUMMARY_KEY_URL] = repo.html_url
         entry[SUMMARY_KEY_TOPICS] = repo.get_topics()
@@ -397,9 +411,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                     raise RuntimeError(f"Dependency error: {msg}") from e
                 logger.warning("Continuing due to --ignore-dep-error flag")
                 # Record partial result with download failure
-                results.append(
-                    _build_result_entry(repo_name, dest_folder, find_result)
-                )
+                results.append(_build_result_entry(repo_name, dest_folder, find_result))
                 has_errors = True
 
     if has_errors:
@@ -442,18 +454,17 @@ def _get_common_prefix(paths):
     return str(Path(*common_parts))
 
 
-def get_listing_output_dir(config, build_dir):
+def get_common_dir(config):
     """Determine the output directory for the listing based on config dest paths."""
-    dest_paths = [
-        item.get(CONFIG_KEY_DEST) for item in config if item.get(CONFIG_KEY_DEST)
-    ]
+    dest_paths = [item.get(CONFIG_KEY_DEST) for item in config]
 
-    if dest_paths:
+    # assume they have a different dest each
+    if all(dest_paths) and len(dest_paths) > 1:
         common_prefix = _get_common_prefix(dest_paths)
         if common_prefix:
-            return os.path.join(build_dir, common_prefix)
+            return common_prefix
 
-    return DEFAULT_LISTING_DIR
+    return None
 
 
 def _load_css():
@@ -464,16 +475,8 @@ def _load_css():
     return ""
 
 
-def generate_listing(results, output_dir, listing_config=None):
+def generate_listing(results, build_dir, output_dir, listing_config=None):
     """Generate an index.html listing page from the results."""
-    try:
-        from htpy import a, body, div, h1, head, html, link, meta, style, title
-    except ImportError:
-        logger.error(
-            "htpy is required for generating listings. Install with: pip install htpy"
-        )
-        return False
-
     output_path = Path(output_dir) / "index.html"
 
     if output_path.exists():
@@ -498,15 +501,16 @@ def generate_listing(results, output_dir, listing_config=None):
         if not result.get(SUMMARY_KEY_DOWNLOAD_OK):
             continue
 
-        item_title = (
-            result.get(SUMMARY_KEY_TITLE)
-            or result.get(SUMMARY_KEY_TAG)
-            or result.get(SUMMARY_KEY_REPO)
-        )
-        dest = result.get(SUMMARY_KEY_DEST, "")
+        item_title = result.get(SUMMARY_KEY_REPO_SHORT)
 
-        # Create link to the dest folder
-        link_href = dest if dest else "."
+        dest = result.get(SUMMARY_KEY_DEST)
+        if dest:
+            # suppose dist hierarchy is the one on the final server
+            dest = "/" + dest
+        else:
+            dest = "/"
+
+        link_href = dest
 
         color_index = i % 6
         item = div(class_=f"grid-item color-{color_index}")[
@@ -522,9 +526,7 @@ def generate_listing(results, output_dir, listing_config=None):
     footer_element = None
     if homepage:
         footer_text = homepage_title if homepage_title else homepage
-        footer_element = div(class_="footer")[
-            a(href=homepage)[footer_text]
-        ]
+        footer_element = div(class_="footer")[a(href=homepage)[footer_text]]
 
     page = html(lang="en")[
         head[

@@ -6,7 +6,13 @@ license = "MIT"
 readme = "README.md"
 authors = [{ name = "Guilhem Vellut", email = "guilhem.vellut@gmail.com" }]
 requires-python = ">=3.10"
-dependencies = ["click>=8.3.1", "colorama>=0.4.6", "pygithub>=2.8.1", "htpy>=25.12.0"]
+dependencies = [
+    "click>=8.3.1",
+    "colorama>=0.4.6",
+    "pygithub>=2.8.1",
+    "htpy>=25.12.0",
+    "attrs>=25.4.0",
+]
 
 [project.scripts]
 ghuzzle = "ghuzzle.__main__:main"
