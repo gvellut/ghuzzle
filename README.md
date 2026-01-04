@@ -2,43 +2,12 @@
 
 Ghuzzle is a tool to download and assemble dependencies from GitHub releases into a local directory. It supports both public and private repositories via GitHub tokens.
 
-## Installation
-
-Install as a Python package (**Not yet**):
-
-```bash
-pip install ghuzzle
-```
-
-## Usage as CLI
-
-Run the tool with a GitHub token.
-
-```bash
-python -m ghuzzle --token YOUR_GITHUB_TOKEN --config deps.json
-```
-
-This downloads assets matching patterns from specified repos/tags and extracts them into `./dist`.
-
-## Usage as Python Library
-
-Import and call the `download_and_extract` function:
-
-```python
-from ghuzzle import download_and_extract
-
-config = [
-    {"repo": "user/repo", "tag": "v1.0", "asset_pattern": "*.tar.gz"}
-]
-download_and_extract(token="YOUR_TOKEN", config=config, build_dir="./build")
-```
-
 ## Config file
 
 Provide a JSON list of objects, e.g. `ghuzzle.json`:
 - `repo` (required): `owner/name` of the repository.
-- `tag` (optional, default `latest`): release tag to use.
-- `asset-pattern` (required): shell-style wildcard matched with `fnmatch` (e.g., `myfile*.zip`, `*.txt`, `asdasd*`). Use `source.zip` or `source.tar.gz` for source assets
+- `tag` (optional, default `latest`): release tag to use. Possibly contains shell-style wildcards.
+- `asset-pattern` (required): shell-style wildcard matched with `fnmatch` (e.g., `myfile*.zip`, `*.txt`, `asdasd*` or `my-asset.zip` with no wildcard). Use `source.zip` or `source.tar.gz` for source assets
 - `dest` (optional): output subfolder relative to the build-dir input to the action (defaults to the repo name).
 - `dir-content` (optional, default `false`): if extraction yields a single directory, flatten it.
 - `extract` (optional, default `true`): set to `false` to just copy the asset, even if extractable (zip, tar.gz). If not extractable, will have no effect
@@ -53,9 +22,25 @@ Example:
         "asset-pattern": "dmp_200_mm.zip",
         "dest": "hello"
     },
-    ....
+    ...
 ]
 ```
+
+## Usage as CLI
+
+### Installation for dev
+
+There is no package published on Pypi for the time being. Instead, clone the repo locally and do `uv sync`.
+
+### Run
+
+Run the tool with a GitHub token.
+
+```bash
+python -m ghuzzle --token YOUR_GITHUB_TOKEN --config deps.json
+```
+
+This downloads assets matching patterns from specified repos/tags and extracts them into `./dist` (default).
 
 ## Usage as GitHub Action
 
@@ -78,8 +63,8 @@ For private repositories, see the [Access private repo](#access-private-repo) se
 - `build-dir`: Output directory for downloaded assets (default: `./dist`).
 - `token`: GitHub token for accessing private repositories (default: `github.token`).
 - `ignore-dep-error`: Flag to continue if dependency cannot be found (default: `n`).
-- `output-summary`: Output a JSON summary of results. Set to `true` for default path (`ghuzzle-result.json`) or specify a custom path.
-- `gen-listing`: Generate an `index.html` listing page. Set to `true` for default location (common dest prefix, inside build dir) or specify a custom directory path (relative to `$PWD` of step)
+- `output-summary`: Output a JSON summary of results. Set to `true` for default path (`ghuzzle-result.json`) or specify a custom path. This can be used to build a custom listing page (you will have to set it up yourself).
+- `gen-listing`: Generate an `index.html` listing page. Set to `true` for default location (inside build dir: Common `dest` prefix or folder `ghuzzle` if no common prefix) or specify a custom directory path (relative to `$PWD` of step)
 - `gen-listing-config`: Path to a JSON config file for the listing page (`title`, `homepage`, `homepage-title` keys).
 
 ### Access the private action ghuzzle from other repo by same user
