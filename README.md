@@ -78,6 +78,9 @@ For private repositories, see the [Access private repo](#access-private-repo) se
 - `build-dir`: Output directory for downloaded assets (default: `./dist`).
 - `token`: GitHub token for accessing private repositories (default: `github.token`).
 - `ignore-dep-error`: Flag to continue if dependency cannot be found (default: `n`).
+- `output-summary`: Output a JSON summary of results. Set to `true` for default path (`ghuzzle-result.json`) or specify a custom path.
+- `gen-listing`: Generate an `index.html` listing page. Set to `true` for default location (common dest prefix) or specify a custom directory path.
+- `gen-listing-config`: Path to a JSON config file for the listing page (`title`, `homepage`, `homepage-title` keys).
 
 ### Access the private action ghuzzle from other repo by same user
 
