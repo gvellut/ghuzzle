@@ -628,16 +628,20 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
         custom_color = result.get(SUMMARY_KEY_COLOR)
         if custom_color:
             # Use custom color with dimming overlay
-            item = div(
-                class_="grid-item custom-color",
-                style=f"--custom-bg-color: {custom_color};",
-                title=full_repo_name,
-            )[a(href=link_href)[item_title]]
+            item = a(href=link_href)[
+                div(
+                    class_="grid-item custom-color",
+                    style=f"--custom-bg-color: {custom_color};",
+                    title=full_repo_name,
+                )[item_title]
+            ]
         else:
             # Use default color scheme
             color_index = i % 6
-            item = div(class_=f"grid-item color-{color_index}", title=full_repo_name)[
-                a(href=link_href)[item_title]
+            item = a(href=link_href)[
+                div(class_=f"grid-item color-{color_index}", title=full_repo_name)[
+                    item_title
+                ]
             ]
         items.append(item)
 

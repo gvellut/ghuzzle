@@ -18,11 +18,11 @@ inputs:
     required: false
     default: 'n'
   output-summary:
-    description: 'Output a JSON summary of results. Set to "true" for default path (ghuzzle-summary.json) or specify a custom path.'
+    description: 'Output a JSON summary of results. Set to "true", "y", "1"... for default path (ghuzzle-summary.json) or specify a custom path.'
     required: false
     default: ''
   gen-listing:
-    description: 'Generate an index.html listing page. Set to "true" for default location (common dest prefix) or specify a custom directory path.'
+    description: 'Generate an index.html listing page. Set to "true", "y", "1"... for default location (common dest prefix) or specify a custom directory path.'
     required: false
     default: ''
   gen-listing-config:
