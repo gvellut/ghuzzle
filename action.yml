@@ -14,7 +14,7 @@ inputs:
     required: false
     default: ${{ github.token }} # Fallback to the default runner token
   ignore-dep-error:
-    description: 'Flag to ignore if dep cannot be found'
+    description: 'Flag to ignore if dep cannot be downloaded or processed'
     required: false
     default: 'n'
   output-summary:
