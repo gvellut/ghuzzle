@@ -612,6 +612,8 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
             SUMMARY_KEY_REPO_SHORT
         )
 
+        logger.info(f"Tile {item_title}")
+
         # Full repo name for tooltip
         full_repo_name = result.get(SUMMARY_KEY_REPO)
 
