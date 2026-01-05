@@ -73,11 +73,25 @@ LISTING_CONFIG_KEY_HOMEPAGE = "homepage"
 LISTING_CONFIG_KEY_HOMEPAGE_TITLE = "homepage-title"
 
 # Default values
+DEFAULT_CONFIG = "ghuzzle.json"
+DEFAULT_BUILD_DIR = "dist"
 DEFAULT_SUMMARY_PATH = "ghuzzle-summary.json"
 DEFAULT_LISTING_DIR = "ghuzzle"
 
 # Regex for validating hex color (6 hex digits)
 HEX_COLOR_REGEX = re.compile(r"^#?([0-9a-fA-F]{6})$")
+
+
+class AssetNotFoundError(Exception):
+    pass
+
+
+class AssetProcessingError(Exception):
+    pass
+
+
+class FatalDependencyError(Exception):
+    pass
 
 
 def _parse_color(color_value, repo_name):
@@ -130,7 +144,7 @@ def _get_temp_dir():
     return os.environ.get("RUNNER_TEMP", tempfile.gettempdir())
 
 
-def _flatten_single_dir(dest_folder):
+def _flatten_single_dir(dest_folder, ignore_dep_error):
     """
     If dest_folder contains only a single directory, move its contents up
     and remove the empty directory.
@@ -146,8 +160,12 @@ def _flatten_single_dir(dest_folder):
                 shutil.move(src, dst)
             # Remove the now-empty single directory
             os.rmdir(single_item)
-            logger.debug(f"Flattened single directory '{contents[0]}' in {dest_folder}")
+            logger.info(f"Flattened single directory '{contents[0]}' in {dest_folder}")
             return True
+
+    if not ignore_dep_error:
+        raise AssetProcessingError("Flatten error: unable to flatten content")
+
     return False
 
 
@@ -244,7 +262,7 @@ def _find_asset(g: Github, repo_name, tag, asset_pattern):
                     release = r
                     break
             if not release:
-                raise ValueError(f"No release found matching pattern: {tag}")
+                raise AssetNotFoundError(f"No release found matching pattern: {tag}")
         else:
             release = repo.get_release(tag)
         result.release = release
@@ -390,9 +408,9 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                 find_result = _find_asset(g, repo_name, tag, asset_pattern)
 
                 if not find_result.asset_ok:
-                    msg = f"No asset found matching '{asset_pattern}' for {repo_name}"
-                    logger.error(msg)
+                    msg = f"No asset found for {repo_name}"
                     if ignore_dep_error:
+                        logger.error(msg)
                         logger.warning("Continuing due to --ignore-dep-error flag")
                         # Record partial result
                         results.append(
@@ -407,7 +425,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                         has_errors = True
                         continue
                     else:
-                        raise RuntimeError(f"Dependency error: {msg}")
+                        raise AssetNotFoundError(msg)
 
                 target_asset = find_result.asset
                 temp_file = _download_asset(repo_name, target_asset, temp_dir, token)
@@ -435,7 +453,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
 
                     # Handle dir-content option: flatten if only one directory
                     if dir_content:
-                        _flatten_single_dir(staging_dir)
+                        _flatten_single_dir(staging_dir, ignore_dep_error)
 
                     # Merge contents from staging to final destination
                     os.makedirs(final_dest_folder, exist_ok=True)
@@ -450,10 +468,17 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                     # Not extracting: either extract=False or not an extractable format
                     if should_extract and not is_extractable:
                         ext = os.path.splitext(temp_file)[1] if "." in temp_file else ""
-                        logger.warning(
+                        if not ignore_dep_error:
+                            msg = (
+                                f"Extraction requested but '{ext}' files not "
+                                "extractable."
+                            )
+                            raise AssetProcessingError(msg)
+                        msg = (
                             f"Cannot extract '{ext}' files. Copying to destination "
                             "instead."
                         )
+                        logger.warning(msg)
 
                     # Copy file to destination folder
                     os.makedirs(final_dest_folder, exist_ok=True)
@@ -474,12 +499,15 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                 )
 
             except Exception as e:
-                msg = f"Error processing {repo_name}"
+                msg = f"Error processing {repo_name}: {e}"
+
+                if not ignore_dep_error:
+                    raise FatalDependencyError(f"Dependency error: {msg}") from e
+
                 logger.error(msg)
                 logger.debug("".join(traceback.format_exception(e)))
-                if not ignore_dep_error:
-                    raise RuntimeError(f"Dependency error: {msg}") from e
                 logger.warning("Continuing due to --ignore-dep-error flag")
+
                 # Record partial result with download failure
                 results.append(
                     _build_result_entry(

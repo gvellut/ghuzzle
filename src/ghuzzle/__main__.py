@@ -10,6 +10,8 @@ import colorama
 from colorama import Fore
 
 from .ghuzzle import (
+    DEFAULT_BUILD_DIR,
+    DEFAULT_CONFIG,
     DEFAULT_LISTING_DIR,
     DEFAULT_SUMMARY_PATH,
     download_and_extract,
@@ -19,10 +21,6 @@ from .ghuzzle import (
 )
 
 logger = logging.getLogger(__package__)
-
-# same default as in action.yml
-DEFAULT_CONFIG = "ghuzzle.json"
-DEFAULT_BUILD_DIR = "dist"
 
 
 LOG_COLORS = {logging.ERROR: Fore.RED, logging.WARNING: Fore.YELLOW}
@@ -84,7 +82,8 @@ TRUE_LOWER_STR = ("true", "y", "yes", "1")
     "--ignore-dep-error",
     is_flag=True,
     default=False,
-    help="Continue if a dependency cannot be downloaded (default: abort on error)",
+    help="Continue if a dependency cannot be downloaded or processed "
+    "(default: abort on error)",
 )
 @click.option(
     "--output-summary",
