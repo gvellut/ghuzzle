@@ -30,9 +30,10 @@ class ColorFormatter(logging.Formatter):
     colorama.init()
 
     def format(self, record, *args, **kwargs):
+        formatted = super().format(record, *args, **kwargs)
         if record.levelno in LOG_COLORS:
-            record.msg = f"{LOG_COLORS[record.levelno]}{record.msg}{Fore.RESET}"
-        return super().format(record, *args, **kwargs)
+            formatted = f"{LOG_COLORS[record.levelno]}{formatted}{Fore.RESET}"
+        return formatted
 
 
 def setup_logging(is_debug):
@@ -44,7 +45,7 @@ def setup_logging(is_debug):
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
-    formatter = ColorFormatter("%(message)s")
+    formatter = ColorFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
