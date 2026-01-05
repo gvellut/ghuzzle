@@ -1,7 +1,11 @@
 - Add support in the config file ghuzzle.json : support for keys : "display-name" and "color". These fields are only used : for the output ghuzzle-summary.json and the default listing page (if any activated)
 - The color is either an hex ie "#asdhas" with or without # or "random" : the display_name is copied as is (if there) to the ghuzzle summary (and the data structure used for the default listing page). The color is transformed before copy (if there) to a correct hashhtag hex ie "#abababzx"  or if random : a random hex is generated ("random" value should not be in the summary).  So can be used later directly in color. If color is bad format : log (no log otherwise).
 - Generate the keys for config + summary (different constants even if same value). Define a constant for random
+<<<<<<< HEAD
 - The default listing page uses  the display_name if there, or the SUMMARY_KEY_REPO_SHORT if not (like now). The color (if there) is used to set the color of the grid tile for the repo. Make sure the tile is set up so the white text (default?) looks good on it. you can use a  "Dimming" Overlay for that (for all the tiles with a chosen color). 
+=======
+- The default listing page uses  the display_name if there, or the SUMMARY_KEY_REPO_SHORT if not (like now). The color (if there) is used to set the color of the grid tile for the repo. Make sure the tile is set so the white text (default?) looks good on it. you can use a  "Dimming" Overlay for that (for all the tile with a chosen color). 
+>>>>>>> c83e197 (Prompt)
 - if no color set or color was determined to be bad format in the config : use the same color scheme as used now
 - Also add a tooltip with the full repo name (that comes from the ghuzzle.json config file ie gvellut/jncep)
 - Add a short documentation in the ## Config file of Readme (same concisenes as the existing keys)
