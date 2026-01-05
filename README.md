@@ -11,6 +11,8 @@ Provide a JSON list of objects, e.g. `ghuzzle.json`:
 - `dest` (optional): output subfolder relative to the build-dir input to the action (defaults to the repo name).
 - `dir-content` (optional, default `false`): if extraction yields a single directory, flatten it.
 - `extract` (optional, default `true`): set to `false` to just copy the asset, even if extractable (zip, tar.gz). If not extractable, will have no effect
+- `display-name` (optional): custom display name for the summary and listing page.
+- `color` (optional): custom tile color for the listing page. Accepts hex (e.g., `#ff5733` or `ff5733`) or `random`.
 
 Example:
 

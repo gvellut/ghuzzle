@@ -64,6 +64,24 @@ body {
 .color-4 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
 .color-5 { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
 
+/* Custom color tiles with dimming overlay for text readability */
+.grid-item.custom-color {
+    background-color: var(--custom-bg-color);
+    position: relative;
+}
+
+.grid-item.custom-color::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 24px;
+    pointer-events: none;
+}
+
 .footer {
     margin-top: auto;
     padding-top: 2rem;
