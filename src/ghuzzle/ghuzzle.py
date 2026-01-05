@@ -5,6 +5,8 @@ import json
 import logging
 import os
 from pathlib import Path
+import random
+import re
 import shutil
 import tarfile
 import tempfile
@@ -37,6 +39,11 @@ CONFIG_KEY_TAG = "tag"
 CONFIG_KEY_ASSET_PATTERN = "asset-pattern"
 CONFIG_KEY_DEST = "dest"
 CONFIG_KEY_DIR_CONTENT = "dir-content"
+CONFIG_KEY_DISPLAY_NAME = "display-name"
+CONFIG_KEY_COLOR = "color"
+
+# Config color value for random
+CONFIG_COLOR_RANDOM = "random"
 
 SOURCE_ZIP = "source.zip"
 SOURCE_TAR_GZ = "source.tar.gz"
@@ -57,6 +64,8 @@ SUMMARY_KEY_REPO_OK = "repo_ok"
 SUMMARY_KEY_RELEASE_OK = "release_ok"
 SUMMARY_KEY_ASSET_OK = "asset_ok"
 SUMMARY_KEY_DOWNLOAD_OK = "download_ok"
+SUMMARY_KEY_DISPLAY_NAME = "display_name"
+SUMMARY_KEY_COLOR = "color"
 
 # Listing config keys
 LISTING_CONFIG_KEY_TITLE = "title"
@@ -66,6 +75,42 @@ LISTING_CONFIG_KEY_HOMEPAGE_TITLE = "homepage-title"
 # Default values
 DEFAULT_SUMMARY_PATH = "ghuzzle-summary.json"
 DEFAULT_LISTING_DIR = "ghuzzle"
+
+# Regex for validating hex color (6 hex digits)
+HEX_COLOR_REGEX = re.compile(r"^#?([0-9a-fA-F]{6})$")
+
+
+def _parse_color(color_value, repo_name):
+    """Parse and validate a color value from config.
+
+    Args:
+        color_value: The color string from config (hex with/without #, or "random")
+        repo_name: The repo name for logging purposes
+
+    Returns:
+        A valid hex color string with # prefix, or None if invalid/not provided.
+    """
+    if not color_value:
+        return None
+
+    # Handle "random" value
+    if color_value.lower() == CONFIG_COLOR_RANDOM:
+        return _generate_random_color()
+
+    # Validate and normalize hex color
+    match = HEX_COLOR_REGEX.match(color_value.strip())
+    if match:
+        return f"#{match.group(1).lower()}"
+
+    # Bad format - log warning
+    logger.warning(f"Invalid color format '{color_value}' for {repo_name}, ignoring")
+    return None
+
+
+def _generate_random_color():
+    """Generate a random hex color for UI purposes."""
+    # Using random (not secrets) is acceptable here - this is purely for visual display
+    return f"#{random.randint(0, 0xFFFFFF):06x}"
 
 
 def _is_extractable(filename):
@@ -264,7 +309,12 @@ def _download_asset(repo_name, target_asset, temp_dir, token):
 
 
 def _build_result_entry(
-    repo_name, dest_folder, find_result: FindResult, download_ok=False
+    repo_name,
+    dest_folder,
+    find_result: FindResult,
+    download_ok=False,
+    display_name=None,
+    color=None,
 ):
     """Build a result entry dictionary from find_result data."""
     entry = {
@@ -298,6 +348,12 @@ def _build_result_entry(
     if dest_folder:
         entry[SUMMARY_KEY_DEST] = dest_folder
 
+    if display_name:
+        entry[SUMMARY_KEY_DISPLAY_NAME] = display_name
+
+    if color:
+        entry[SUMMARY_KEY_COLOR] = color
+
     return entry
 
 
@@ -324,6 +380,8 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
             asset_pattern = item[CONFIG_KEY_ASSET_PATTERN]
             dest_folder = item.get(CONFIG_KEY_DEST)
             dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
+            display_name = item.get(CONFIG_KEY_DISPLAY_NAME)
+            color = _parse_color(item.get(CONFIG_KEY_COLOR), repo_name)
 
             # Initialize find_result for error handling
             find_result = FindResult(repo_name)
@@ -338,7 +396,13 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                         logger.warning("Continuing due to --ignore-dep-error flag")
                         # Record partial result
                         results.append(
-                            _build_result_entry(repo_name, dest_folder, find_result)
+                            _build_result_entry(
+                                repo_name,
+                                dest_folder,
+                                find_result,
+                                display_name=display_name,
+                                color=color,
+                            )
                         )
                         has_errors = True
                         continue
@@ -400,7 +464,12 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                 # Record successful result
                 results.append(
                     _build_result_entry(
-                        repo_name, dest_folder, find_result, download_ok=True
+                        repo_name,
+                        dest_folder,
+                        find_result,
+                        download_ok=True,
+                        display_name=display_name,
+                        color=color,
                     )
                 )
 
@@ -412,7 +481,15 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                     raise RuntimeError(f"Dependency error: {msg}") from e
                 logger.warning("Continuing due to --ignore-dep-error flag")
                 # Record partial result with download failure
-                results.append(_build_result_entry(repo_name, dest_folder, find_result))
+                results.append(
+                    _build_result_entry(
+                        repo_name,
+                        dest_folder,
+                        find_result,
+                        display_name=display_name,
+                        color=color,
+                    )
+                )
                 has_errors = True
 
     if has_errors:
@@ -502,7 +579,13 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
         if not result.get(SUMMARY_KEY_DOWNLOAD_OK):
             continue
 
-        item_title = result.get(SUMMARY_KEY_REPO_SHORT)
+        # Use display_name if available, otherwise fallback to repo_short
+        item_title = result.get(SUMMARY_KEY_DISPLAY_NAME) or result.get(
+            SUMMARY_KEY_REPO_SHORT
+        )
+
+        # Full repo name for tooltip
+        full_repo_name = result.get(SUMMARY_KEY_REPO)
 
         dest = result.get(SUMMARY_KEY_DEST)
         if dest:
@@ -513,10 +596,21 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
 
         link_href = dest
 
-        color_index = i % 6
-        item = div(class_=f"grid-item color-{color_index}")[
-            a(href=link_href)[item_title]
-        ]
+        # Check for custom color
+        custom_color = result.get(SUMMARY_KEY_COLOR)
+        if custom_color:
+            # Use custom color with dimming overlay
+            item = div(
+                class_="grid-item custom-color",
+                style=f"--custom-bg-color: {custom_color};",
+                title=full_repo_name,
+            )[a(href=link_href)[item_title]]
+        else:
+            # Use default color scheme
+            color_index = i % 6
+            item = div(class_=f"grid-item color-{color_index}", title=full_repo_name)[
+                a(href=link_href)[item_title]
+            ]
         items.append(item)
 
     # Build page structure
