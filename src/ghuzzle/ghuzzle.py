@@ -16,7 +16,7 @@ import zipfile
 
 import attr
 from github import Auth, Github, GithubIntegration
-from htpy import a, body, div, h1, head, html, link, meta, style, title
+from htpy import a, body, div, h1, head, html, link, meta, span, style, title
 from markupsafe import Markup
 import requests
 
@@ -581,11 +581,13 @@ def _load_css():
     return ""
 
 
-def generate_listing(results, build_dir, output_dir, listing_config=None):
+def generate_listing(
+    results, build_dir, output_dir, is_listing_explicit, listing_config=None
+):
     """Generate an index.html listing page from the results."""
     output_path = Path(output_dir) / "index.html"
 
-    if output_path.exists():
+    if not is_listing_explicit and output_path.exists():
         logger.error(f"Listing file already exists: {output_path}")
         return False
 
@@ -614,9 +616,6 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
 
         logger.info(f"Tile {item_title}")
 
-        # Full repo name for tooltip
-        full_repo_name = result.get(SUMMARY_KEY_REPO)
-
         dest = result.get(SUMMARY_KEY_DEST)
         if dest:
             # suppose dist hierarchy is the one on the final server
@@ -634,16 +633,13 @@ def generate_listing(results, build_dir, output_dir, listing_config=None):
                 div(
                     class_="grid-item custom-color",
                     style=f"--custom-bg-color: {custom_color};",
-                    title=full_repo_name,
-                )[item_title]
+                )[span[item_title]]
             ]
         else:
             # Use default color scheme
             color_index = i % 6
             item = a(href=link_href)[
-                div(class_=f"grid-item color-{color_index}", title=full_repo_name)[
-                    item_title
-                ]
+                div(class_=f"grid-item color-{color_index}")[span[item_title]]
             ]
         items.append(item)
 

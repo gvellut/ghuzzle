@@ -151,9 +151,11 @@ def main(
                 listing_dir = DEFAULT_LISTING_DIR
             # relative to pwd
             listing_dir = os.path.join(build_dir, listing_dir)
+            is_listing_explicit = False
         else:
             # suppose already realtive to pwd
             listing_dir = gen_listing
+            is_listing_explicit = True
 
         # Load listing config if provided
         listing_config = None
@@ -161,7 +163,9 @@ def main(
             with open(gen_listing_config, encoding="utf-8") as f:
                 listing_config = json.load(f)
 
-        generate_listing(results, build_dir, listing_dir, listing_config)
+        generate_listing(
+            results, build_dir, listing_dir, is_listing_explicit, listing_config
+        )
 
 
 if __name__ == "__main__":
