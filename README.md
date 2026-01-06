@@ -1,6 +1,6 @@
 # Ghuzzle
 
-Ghuzzle is a tool to download and assemble dependencies from GitHub releases into a local directory. It supports both public and private repositories via GitHub tokens.
+Ghuzzle is a tool to download and aggregate dependencies from GitHub releases into a local directory. It supports both public and private repositories via GitHub tokens.
 
 ## Config file
 
