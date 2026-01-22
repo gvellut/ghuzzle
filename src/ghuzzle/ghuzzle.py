@@ -257,7 +257,7 @@ def _find_asset(g: Github, repo_name, tag, asset_pattern):
             release = None
             for r in repo.get_releases():
                 if fnmatch.fnmatch(r.tag_name, tag) or (
-                    r.title and fnmatch.fnmatch(r.title, tag)
+                    r.name and fnmatch.fnmatch(r.name, tag)
                 ):
                     release = r
                     break
