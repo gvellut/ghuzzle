@@ -136,7 +136,7 @@ jobs:
 
 GitHub Apps provide a more secure and scalable way to authenticate, especially for organizations.
 
-The App ID and private key must be added to the secrets to every repo needing access to the private repositories where releases are stored.
+The client ID and private key must be added to the secrets to every repo needing access to the private repositories where releases are stored.
 
 1.  **Navigate to Developer Settings:**
     *   Click your profile photo in the top-right corner -> **Settings**.
@@ -158,7 +158,7 @@ The App ID and private key must be added to the secrets to every repo needing ac
     *   Scroll to the bottom and click **Create GitHub App**.
 
 5.  **Get Credentials:**
-    *   **App ID:** You will see this at the top of the "General" page. Copy it.
+    *   **Client ID:** You will see this at the top of the "General" page. Copy it.
     *   **Private Key:** Scroll down to "Private keys" and click **Generate a private key**. A `.pem` file will download. Open this with a text editor and copy the *entire* contents.
 
 6.  **Install the App:**
@@ -169,7 +169,7 @@ The App ID and private key must be added to the secrets to every repo needing ac
 
 7.  **Store credentials as secrets:**
     *   Go to your repository: **Settings** → **Secrets and variables** → **Actions**.
-    *   Add `MY_APP_ID` with the App ID value.
+    *   Add `MY_APP_CLIENT_ID` with the client ID value.
     *   Add `MY_APP_PRIVATE_KEY` with the entire contents of the `.pem` file.
 
 #### Full example with GitHub App:
