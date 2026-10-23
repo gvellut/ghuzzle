@@ -33,6 +33,9 @@ LATEST = "latest"
 # Extractable file extensions
 EXTRACTABLE_EXTENSIONS = {".tar.gz", ".tgz", ".zip", ".tar", ".tar.bz2", ".tar.xz"}
 
+# Static hosting metadata collected at the build root
+HEADERS_FILENAME = "_headers"
+
 # JSON config keys
 CONFIG_KEY_REPO = "repo"
 CONFIG_KEY_TAG = "tag"
@@ -197,6 +200,37 @@ def _extract_asset(temp_file, dest_folder):
     elif temp_file.endswith(".zip"):
         with zipfile.ZipFile(temp_file, "r") as zip_ref:
             zip_ref.extractall(dest_folder)
+
+
+def _merge_headers(staging_dir, build_dir):
+    """Append package-level hosting rules to the build root without rewriting them."""
+    source = Path(staging_dir) / HEADERS_FILENAME
+    if not source.is_file():
+        return
+
+    content = source.read_bytes()
+    if not content:
+        return
+
+    target = Path(build_dir) / HEADERS_FILENAME
+    with target.open("ab+") as output:
+        output.seek(0, os.SEEK_END)
+        size = output.tell()
+        separator = b""
+        if size:
+            # Keep contributions separate even if the previous file has no newline.
+            output.seek(max(0, size - 4))
+            tail = output.read()
+            if not tail.endswith((b"\n\n", b"\r\n\r\n")):
+                if tail.endswith(b"\r\n"):
+                    separator = b"\r\n"
+                elif tail.endswith(b"\n"):
+                    separator = b"\n"
+                else:
+                    separator = b"\n\n"
+        output.write(separator + content)
+
+    logger.info(f"Merged {source} into {target}")
 
 
 def _get_download_info(repo_name, target_asset, token):
@@ -460,10 +494,16 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                     for item_name in os.listdir(staging_dir):
                         src = os.path.join(staging_dir, item_name)
                         dst = os.path.join(final_dest_folder, item_name)
+                        # Package-level headers belong at the build root, not dest.
+                        if item_name == HEADERS_FILENAME and os.path.isfile(src):
+                            continue
                         if os.path.isdir(src):
                             shutil.copytree(src, dst, dirs_exist_ok=True)
                         else:
                             shutil.copy2(src, dst)
+
+                    # Merge only after the other package files have copied successfully.
+                    _merge_headers(staging_dir, build_dir)
                 else:
                     # Not extracting: either extract=False or not an extractable format
                     if should_extract and not is_extractable:

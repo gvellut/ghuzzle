@@ -28,6 +28,12 @@ Example:
 ]
 ```
 
+### Packaged headers
+
+When an extracted package contains a top-level `_headers` file (after any `dir-content` flattening), Ghuzzle automatically appends its contents to `<build-dir>/_headers` instead of copying it into the package's `dest` folder. Existing root rules are preserved first, followed by package rules in configuration order, separated by blank lines. Empty files contribute nothing; packages without `_headers` leave the root file untouched.
+
+URL paths, comments, indentation, and duplicate rules are preserved unchanged. Paths are not prefixed with `dest`, and conflicts are left to the hosting provider's header rules. Merging is append-only: repeated runs append the rules again. Nested `_headers` files and assets handled with `extract: false` retain their existing behavior. Read/write failures follow the existing `ignore-dep-error` setting.
+
 ## Usage as CLI
 
 ### Installation for dev
