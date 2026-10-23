@@ -563,6 +563,19 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
     if has_errors:
         logger.warning("Completed with errors (ignored due to --ignore-dep-error flag)")
 
+    # Show the final hosting rules in normal CLI and GitHub Actions output.
+    headers_path = Path(build_dir) / HEADERS_FILENAME
+    if headers_path.is_file():
+        try:
+            content = headers_path.read_bytes().decode("utf-8", errors="replace")
+        except OSError as error:
+            # Debug output must not turn a completed assembly into a failure.
+            logger.warning(
+                "Unable to read final %s for logging: %s", headers_path, error
+            )
+        else:
+            logger.info("Final %s contents:\n%s", headers_path, content)
+
     return results
 
 

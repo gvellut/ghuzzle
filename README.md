@@ -34,6 +34,8 @@ When an extracted package contains a top-level `_headers` file (after any `dir-c
 
 URL paths, comments, indentation, and duplicate rules are preserved unchanged. Paths are not prefixed with `dest`, and conflicts are left to the hosting provider's header rules. Merging is append-only: repeated runs append the rules again. Nested `_headers` files and assets handled with `extract: false` retain their existing behavior. Read/write failures follow the existing `ignore-dep-error` setting.
 
+At the end of processing, if the final root `_headers` file exists, Ghuzzle logs its path and full contents at INFO level, visible in normal CLI and GitHub Actions output. Nothing is logged for a missing `_headers` file. A failure to read the file for logging produces a warning without failing the completed assembly.
+
 ## Usage as CLI
 
 ### Installation for dev
