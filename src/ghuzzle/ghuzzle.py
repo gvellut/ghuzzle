@@ -44,6 +44,7 @@ CONFIG_KEY_DEST = "dest"
 CONFIG_KEY_DIR_CONTENT = "dir-content"
 CONFIG_KEY_DISPLAY_NAME = "display-name"
 CONFIG_KEY_COLOR = "color"
+CONFIG_KEY_HIDE_FROM_LISTING = "hide-from-listing"
 
 # Config color value for random
 CONFIG_COLOR_RANDOM = "random"
@@ -69,6 +70,7 @@ SUMMARY_KEY_ASSET_OK = "asset-ok"
 SUMMARY_KEY_DOWNLOAD_OK = "download-ok"
 SUMMARY_KEY_DISPLAY_NAME = "display-name"
 SUMMARY_KEY_COLOR = "color"
+SUMMARY_KEY_HIDE_FROM_LISTING = "hide-from-listing"
 
 # Listing config keys
 LISTING_CONFIG_KEY_TITLE = "title"
@@ -367,6 +369,7 @@ def _build_result_entry(
     download_ok=False,
     display_name=None,
     color=None,
+    hide_from_listing=False,
 ):
     """Build a result entry dictionary from find_result data."""
     entry = {
@@ -406,6 +409,10 @@ def _build_result_entry(
     if color:
         entry[SUMMARY_KEY_COLOR] = color
 
+    # Keep hidden apps in the summary so their download results remain available.
+    if hide_from_listing:
+        entry[SUMMARY_KEY_HIDE_FROM_LISTING] = hide_from_listing
+
     return entry
 
 
@@ -434,6 +441,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
             dir_content = item.get(CONFIG_KEY_DIR_CONTENT, False)
             display_name = item.get(CONFIG_KEY_DISPLAY_NAME)
             color = _parse_color(item.get(CONFIG_KEY_COLOR), repo_name)
+            hide_from_listing = item.get(CONFIG_KEY_HIDE_FROM_LISTING, False)
 
             # Initialize find_result for error handling
             find_result = FindResult(repo_name)
@@ -454,6 +462,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                                 find_result,
                                 display_name=display_name,
                                 color=color,
+                                hide_from_listing=hide_from_listing,
                             )
                         )
                         has_errors = True
@@ -535,6 +544,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                         download_ok=True,
                         display_name=display_name,
                         color=color,
+                        hide_from_listing=hide_from_listing,
                     )
                 )
 
@@ -556,6 +566,7 @@ def download_and_extract(config, build_dir, token, ignore_dep_error=False):
                         find_result,
                         display_name=display_name,
                         color=color,
+                        hide_from_listing=hide_from_listing,
                     )
                 )
                 has_errors = True
@@ -660,6 +671,10 @@ def generate_listing(
     items = []
     for i, result in enumerate(results):
         if not result.get(SUMMARY_KEY_DOWNLOAD_OK):
+            continue
+
+        # Hidden apps are still downloaded, but do not get a listing tile.
+        if result.get(SUMMARY_KEY_HIDE_FROM_LISTING, False):
             continue
 
         # Use display_name if available, otherwise fallback to repo_short

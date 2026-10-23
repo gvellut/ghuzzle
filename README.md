@@ -13,6 +13,7 @@ Provide a JSON list of objects, e.g. `ghuzzle.json`:
 - `extract` (optional, default `true`): set to `false` to just copy the asset, even if extractable (zip, tar.gz). If not extractable, will have no effect
 - `display-name` (optional): custom display name for the summary and listing page.
 - `color` (optional): custom tile color for the listing page. Accepts hex (e.g., `#ff5733` or `ff5733`) or `random`.
+- `hide-from-listing` (optional, default `false`): set to `true` to omit this app from the generated listing page. Its assets are still downloaded and processed, and it remains in the JSON summary.
 
 Example:
 
